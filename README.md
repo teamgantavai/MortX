@@ -1,56 +1,74 @@
-# Welcome to your Expo app 👋
+# MortX AI — React Native Mobile & Web Application 🚀
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**MortX AI** is a state-of-the-art conversational AI application built with **React Native**, **Expo (SDK 57)**, **Expo Router**, and **TypeScript**, inspired by modern AI interfaces like ChatGPT, Claude, and DeepSeek.
 
-## Get started
+---
 
-1. Install dependencies
+## ✨ Features
 
-   ```bash
-   npm install
-   ```
+- **Multi-Model Intelligence Catalog**:
+  - ⚡ **MortX 4o**: Flagship omnimodal model for general reasoning, writing, and questions.
+  - 🧠 **MortX R1 DeepReasoning**: Chain-of-thought model featuring an expandable *"Thought for a moment"* reasoning block.
+  - ⚡ **MortX Flash**: Ultra-fast, low-latency model for snappy answers.
+  - 💻 **MortX CodeMaster**: Developer-oriented model producing formatted code blocks with syntax badges and one-tap clipboard copy.
+  - 🏡 **MortX Finance & Mortgage**: Specialized domain advisor for loan amortizations, interest calculations, EMI comparisons, and real estate cash-flow analysis.
 
-2. Start the app
+- **Conversation Management**:
+  - Drawer sidebar to create **New Chats**, search conversations, rename, and delete chats.
+  - Conversation history automatically persisted using `@react-native-async-storage/async-storage`.
 
-   ```bash
-   npx expo start
-   ```
+- **Rich Markdown & Code Rendering**:
+  - Formatted headings, lists, bold text, inline code snippets, blockquotes, and tables.
+  - High-contrast code blocks with language pills and copy-to-clipboard buttons.
 
-In the output, you'll find options to open the app in a
+- **Interactive Voice Mode Visualizer**:
+  - Advanced voice modal with animated pulsing audio sphere, multi-state transitions (Listening, Thinking, Speaking), and live transcript display.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- **Explore & Prompt Hub**:
+  - Curated template prompts across **Finance**, **Coding**, **Writing**, **Learning**, and **Productivity**.
+  - One-tap prompt launching that immediately opens in the chat interface.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- **Settings & Extensibility**:
+  - Built-in smart simulated streaming engine out-of-the-box (no API keys required).
+  - Optional support for custom **OpenAI** or **OpenRouter** API keys.
+  - Custom system prompt instructions.
+  - Full conversation export (JSON) to clipboard.
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## 🛠️ Tech Stack
 
+- **Framework**: [Expo](https://expo.dev/) (SDK 57) + [React Native](https://reactnative.dev/) (0.86)
+- **Language**: TypeScript
+- **Navigation**: [Expo Router](https://docs.expo.dev/router/introduction/) (File-based routing)
+- **Icons**: `@expo/vector-icons` (Ionicons)
+- **Storage**: `@react-native-async-storage/async-storage`
+- **Clipboard**: `expo-clipboard`
+
+---
+
+## 🚀 Running the App
+
+### Start the development server
 ```bash
-npm run reset-project
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Launch directly on target platforms
+```bash
+# Web browser
+npx expo start --web
 
-### Other setup steps
+# Android emulator / connected device
+npx expo start --android
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+# iOS simulator (macOS required)
+npx expo start --ios
+```
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Typecheck & Lint
+```bash
+npx tsc --noEmit
+npx expo lint
+npx expo-doctor
+```
