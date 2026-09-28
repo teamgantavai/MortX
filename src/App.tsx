@@ -1,18 +1,28 @@
-import { useState } from 'react'
 import {
-  Home, Newspaper, Map, Sparkles, User, MapPin, Bell, TrendingUp,
-  Shield, IndianRupee, GraduationCap,
-  BadgeCheck
+  BadgeCheck,
+  Bell,
+  GraduationCap,
+  Home,
+  IndianRupee,
+  Map,
+  MapPin,
+  Newspaper,
+  Shield,
+  Sparkles,
+  TrendingUp,
+  User,
+  MessageSquare
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
-import HomeScreen from './screens/HomeScreen'
-import NewsScreen from './screens/NewsScreen'
-import MapScreen from './screens/MapScreen'
 import AIScreen from './screens/AIScreen'
-import StudentScreen from './screens/StudentScreen'
-import PricesScreen from './screens/PricesScreen'
 import AlertsScreen from './screens/AlertsScreen'
+import HomeScreen from './screens/HomeScreen'
+import MapScreen from './screens/MapScreen'
+import NewsScreen from './screens/NewsScreen'
+import PricesScreen from './screens/PricesScreen'
 import ProfileScreen from './screens/ProfileScreen'
+import StudentScreen from './screens/StudentScreen'
 
 export type Screen =
   | 'home' | 'news' | 'map' | 'ai' | 'profile'
@@ -93,11 +103,10 @@ function Sidebar({ screen, navigate }: { screen: Screen; navigate: (s: Screen) =
             <button
               key={item.screen}
               onClick={() => navigate(item.screen)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-500 transition-all ${
-                isActive
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-500 transition-all ${isActive
                   ? 'bg-[#EEF1FF] text-[#1E2BB8] font-600'
                   : 'text-[#6B7280] hover:bg-[#F4F2ED] hover:text-[#374151]'
-              }`}
+                }`}
             >
               <item.icon
                 size={18}
@@ -119,6 +128,39 @@ function Sidebar({ screen, navigate }: { screen: Screen; navigate: (s: Screen) =
           )
         })}
       </nav>
+
+      {/* Recent Chats in Sidebar */}
+      <div className="mx-3 mt-4 pt-3 border-t border-[#E8E6E1]">
+        <div className="flex items-center justify-between px-2 mb-2">
+          <span className="text-[11px] font-700 text-[#9CA3AF] uppercase tracking-wider">
+            Chat History
+          </span>
+          <button
+            onClick={() => navigate('ai')}
+            className="text-[11px] text-[#1E2BB8] font-600 hover:underline"
+          >
+            + New
+          </button>
+        </div>
+
+        <div className="space-y-0.5">
+          {[
+            { id: '1', title: 'Ludhiana Mandi tomato prices' },
+            { id: '2', title: 'PTU CS seats 2026-27' },
+            { id: '3', title: 'PGs near PTU under 8k' },
+            { id: '4', title: 'PSPCL junior engineer vacancy' },
+          ].map(chat => (
+            <button
+              key={chat.id}
+              onClick={() => navigate('ai')}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-[#4B5563] hover:text-[#0D1117] hover:bg-[#F4F2ED] transition-colors text-left"
+            >
+              <MessageSquare size={13} className="text-[#9CA3AF] shrink-0" />
+              <span className="truncate">{chat.title}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Bottom: user */}
       <div className="mx-4 mt-4 pt-4 border-t border-[#E8E6E1]">
@@ -154,16 +196,14 @@ function BottomNav({ activeTab, navigate }: { activeTab: Screen; navigate: (s: S
           <button
             key={item.screen}
             onClick={() => navigate(item.screen)}
-            className={`flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all ${
-              isActive && !isAI ? 'text-[#1E2BB8]' : isAI ? '' : 'text-[#9CA3AF] active:text-[#1E2BB8]'
-            }`}
+            className={`flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all ${isActive && !isAI ? 'text-[#1E2BB8]' : isAI ? '' : 'text-[#9CA3AF] active:text-[#1E2BB8]'
+              }`}
           >
             {isAI ? (
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-sm transition-all ${
-                isActive
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-sm transition-all ${isActive
                   ? 'bg-gradient-to-br from-[#1E2BB8] to-[#4357E6] shadow-md shadow-[#1E2BB8]/25'
                   : 'bg-[#F4F2ED]'
-              }`}>
+                }`}>
                 <Sparkles size={17} className={isActive ? 'text-white' : 'text-[#1E2BB8]'} />
               </div>
             ) : (
@@ -292,15 +332,15 @@ function RightPanel({ navigate }: { navigate: (s: Screen) => void }) {
 function renderScreen(screen: Screen, navigate: (s: Screen) => void, goBack: () => void) {
   const nav = (s: string) => navigate(s as Screen)
   switch (screen) {
-    case 'home':    return <HomeScreen navigate={nav} />
-    case 'news':    return <NewsScreen navigate={nav} />
-    case 'map':     return <MapScreen navigate={nav} />
-    case 'ai':      return <AIScreen navigate={nav} />
+    case 'home': return <HomeScreen navigate={nav} />
+    case 'news': return <NewsScreen navigate={nav} />
+    case 'map': return <MapScreen navigate={nav} />
+    case 'ai': return <AIScreen navigate={nav} />
     case 'student': return <StudentScreen navigate={nav} goBack={goBack} />
-    case 'prices':  return <PricesScreen navigate={nav} goBack={goBack} />
-    case 'alerts':  return <AlertsScreen navigate={nav} goBack={goBack} />
+    case 'prices': return <PricesScreen navigate={nav} goBack={goBack} />
+    case 'alerts': return <AlertsScreen navigate={nav} goBack={goBack} />
     case 'profile': return <ProfileScreen navigate={nav} />
-    default:        return <HomeScreen navigate={nav} />
+    default: return <HomeScreen navigate={nav} />
   }
 }
 
@@ -317,27 +357,103 @@ export default function App() {
     setScreen(prevScreen)
   }
 
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
+
+  // 1. React Native WebView bridge message listener (when running in Expo Go)
+  useEffect(() => {
+    const handleBridgeMessage = (event: any) => {
+      try {
+        const raw = event.data
+        const data = typeof raw === 'string' ? JSON.parse(raw) : raw
+        if (data && data.type === 'KEYBOARD_STATUS') {
+          setIsKeyboardOpen(Boolean(data.isOpen))
+        }
+      } catch {}
+    }
+
+    window.addEventListener('message', handleBridgeMessage)
+    document.addEventListener('message', handleBridgeMessage as any)
+    return () => {
+      window.removeEventListener('message', handleBridgeMessage)
+      document.removeEventListener('message', handleBridgeMessage as any)
+    }
+  }, [])
+
+  // 2. Direct input focus/blur detection (instant, zero-lag on all mobile devices)
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        setIsKeyboardOpen(true)
+      }
+    }
+
+    const handleFocusOut = () => {
+      setTimeout(() => {
+        const active = document.activeElement as HTMLElement
+        if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) {
+          setIsKeyboardOpen(false)
+        }
+      }, 100)
+    }
+
+    window.addEventListener('focusin', handleFocusIn)
+    window.addEventListener('focusout', handleFocusOut)
+    return () => {
+      window.removeEventListener('focusin', handleFocusIn)
+      window.removeEventListener('focusout', handleFocusOut)
+    }
+  }, [])
+
+  // 3. VisualViewport height resize detection (for mobile browser viewport)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return
+
+    const handleViewport = () => {
+      if (!window.visualViewport) return
+      const vh = window.visualViewport.height
+      const isShrunk = window.innerHeight - vh > 80 || (window.screen?.height && window.screen.height - vh > 150)
+      if (isShrunk) {
+        setIsKeyboardOpen(true)
+      }
+    }
+
+    window.visualViewport.addEventListener('resize', handleViewport)
+    window.visualViewport.addEventListener('scroll', handleViewport)
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleViewport)
+      window.visualViewport?.removeEventListener('scroll', handleViewport)
+    }
+  }, [])
+
   // Active tab for bottom nav (snap to nearest main tab)
   const activeTab = MAIN_TABS.includes(screen) ? screen : prevScreen
 
   return (
-    <div className="h-full flex w-full overflow-hidden" style={{ fontFamily: 'var(--font-body)' }}>
+    <div
+      className="h-full flex w-full overflow-hidden"
+      style={{
+        fontFamily: 'var(--font-body)',
+      }}
+    >
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-60 shrink-0 border-r border-[#E8E6E1] bg-white overflow-y-auto no-scrollbar">
         <Sidebar screen={screen} navigate={navigate} />
       </aside>
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden">
         {/* Screen content */}
-        <main className={`flex-1 min-h-0 no-scrollbar ${screen === 'map' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}`}>
+        <main className={`flex-1 min-h-0 no-scrollbar ${screen === 'map' || screen === 'ai' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}`}>
           {renderScreen(screen, navigate, goBack)}
         </main>
 
-        {/* Mobile bottom nav */}
-        <nav className="lg:hidden shrink-0 bg-white border-t border-[#E8E6E1]">
-          <BottomNav activeTab={activeTab} navigate={navigate} />
-        </nav>
+        {/* Mobile bottom nav - hidden when keyboard is open so text box sits right on top */}
+        {!isKeyboardOpen && (
+          <nav className="lg:hidden shrink-0 bg-white border-t border-[#E8E6E1]">
+            <BottomNav activeTab={activeTab} navigate={navigate} />
+          </nav>
+        )}
       </div>
 
       {/* Desktop right panel */}
