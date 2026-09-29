@@ -3,7 +3,8 @@ import { ALL_DEFAULT_SOURCES } from '../ingestion/sourcesConfig';
 import { eventRepository } from './eventRepository';
 import { alertRepository } from './alertRepository';
 import { priceRepository } from './priceRepository';
-import { GovernmentAlertRecord } from '../ingestion/types';
+import { articleRepository } from './articleRepository';
+import { GovernmentAlertRecord, NewsArticleRecord } from '../ingestion/types';
 
 export function seedInitialDataIfNeeded(db: DatabaseSync): void {
   // 1. Seed default sources if missing
@@ -427,10 +428,270 @@ export function seedInitialDataIfNeeded(db: DatabaseSync): void {
         createdAt: nowIso,
         updatedAt: nowIso,
       },
+      // 8. Ludhiana Mandi: Tomato today vs last week
+      {
+        id: 'price-seed-ldh-tomato-today',
+        productName: 'Tomato',
+        category: 'VEGETABLE' as const,
+        price: 42,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Ludhiana Wholesale Mandi (Salem Tabri)',
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        observedAt: todayIso,
+        sourceId: 'punjab-mandi-board',
+        sourceUrl: 'https://mandiboard.nic.in/api/ludhiana/daily-rates',
+        contentHash: 'hash-seed-ldh-tomato-today',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'price-seed-ldh-tomato-last-week',
+        productName: 'Tomato',
+        category: 'VEGETABLE' as const,
+        price: 38,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Ludhiana Wholesale Mandi (Salem Tabri)',
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        observedAt: sevenDaysAgoIso,
+        sourceId: 'punjab-mandi-board',
+        sourceUrl: 'https://mandiboard.nic.in/api/ludhiana/daily-rates',
+        contentHash: 'hash-seed-ldh-tomato-lastweek',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      // 9. Ludhiana Mandi: Onion today vs last week
+      {
+        id: 'price-seed-ldh-onion-today',
+        productName: 'Onion',
+        category: 'VEGETABLE' as const,
+        price: 36,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Ludhiana Wholesale Mandi (Salem Tabri)',
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        observedAt: todayIso,
+        sourceId: 'punjab-mandi-board',
+        sourceUrl: 'https://mandiboard.nic.in/api/ludhiana/daily-rates',
+        contentHash: 'hash-seed-ldh-onion-today',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'price-seed-ldh-onion-last-week',
+        productName: 'Onion',
+        category: 'VEGETABLE' as const,
+        price: 40,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Ludhiana Wholesale Mandi (Salem Tabri)',
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        observedAt: sevenDaysAgoIso,
+        sourceId: 'punjab-mandi-board',
+        sourceUrl: 'https://mandiboard.nic.in/api/ludhiana/daily-rates',
+        contentHash: 'hash-seed-ldh-onion-lastweek',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      // 10. Ludhiana Mandi: Potato today (Stable)
+      {
+        id: 'price-seed-ldh-potato-today',
+        productName: 'Potato',
+        category: 'VEGETABLE' as const,
+        price: 24,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Ludhiana Wholesale Mandi (Salem Tabri)',
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        observedAt: todayIso,
+        sourceId: 'punjab-mandi-board',
+        sourceUrl: 'https://mandiboard.nic.in/api/ludhiana/daily-rates',
+        contentHash: 'hash-seed-ldh-potato-today',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'price-seed-ldh-potato-last-week',
+        productName: 'Potato',
+        category: 'VEGETABLE' as const,
+        price: 24,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Ludhiana Wholesale Mandi (Salem Tabri)',
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        observedAt: sevenDaysAgoIso,
+        sourceId: 'punjab-mandi-board',
+        sourceUrl: 'https://mandiboard.nic.in/api/ludhiana/daily-rates',
+        contentHash: 'hash-seed-ldh-potato-lastweek',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      // 11. Ludhiana Grain Market: Wheat
+      {
+        id: 'price-seed-ldh-wheat-today',
+        productName: 'Wheat',
+        category: 'GRAIN' as const,
+        price: 2450,
+        unit: 'quintal',
+        currency: 'INR',
+        market: 'Grain Market Gill Road, Ludhiana',
+        locationName: 'Ludhiana',
+        latitude: 30.892,
+        longitude: 75.864,
+        observedAt: todayIso,
+        sourceId: 'punjab-mandi-board',
+        sourceUrl: 'https://mandiboard.nic.in/api/ludhiana/grain-rates',
+        contentHash: 'hash-seed-ldh-wheat-today',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
     ];
 
     for (const pr of samplePrices) {
       priceRepository.insertPrice(pr);
+    }
+  }
+
+  // Ensure wheat price in db matches 2450
+  try {
+    db.prepare("UPDATE price_observations SET price = 2450 WHERE id = 'price-seed-ldh-wheat-today'").run();
+  } catch {
+    // ignore if table doesn't exist yet
+  }
+
+  // 5. Seed news articles if table is empty
+  const countArticlesStmt = db.prepare('SELECT count(*) as count FROM news_articles');
+  const articleCount = (countArticlesStmt.get() as any)?.count || 0;
+
+  if (articleCount === 0) {
+    const yesterdayIso = new Date(Date.now() - 86_400_000).toISOString();
+    const twoDaysAgoIso = new Date(Date.now() - 2 * 86_400_000).toISOString();
+
+    const sampleArticles: NewsArticleRecord[] = [
+      {
+        id: 'news-seed-1',
+        title: 'Anti-drug yatra reaches Ludhiana, community leaders pledge youth support',
+        description: 'Hundreds of residents and university students joined the state anti-drug awareness rally passing through Ludhiana, with key focus on campus engagement.',
+        sourceId: 'tribune-punjab',
+        sourceUrl: 'https://www.tribuneindia.com',
+        articleUrl: 'https://www.tribuneindia.com/news/ludhiana/anti-drug-yatra-ludhiana-101',
+        publishedAt: nowIso,
+        firstSeenAt: nowIso,
+        lastSeenAt: nowIso,
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        category: 'GOVERNMENT',
+        language: 'en',
+        contentHash: 'hash-news-seed-1',
+        status: 'active',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'news-seed-2',
+        title: 'Punjab Technical University approves 60 new Computer Science seats',
+        description: 'PTU administration announced additional seats in AI and data science streams across affiliated colleges in Ludhiana and Jalandhar following high cutoff demand.',
+        sourceId: 'hindustan-times-punjab',
+        sourceUrl: 'https://www.hindustantimes.com',
+        articleUrl: 'https://www.hindustantimes.com/cities/ludhiana-news/ptu-60-new-seats-102',
+        publishedAt: nowIso,
+        firstSeenAt: nowIso,
+        lastSeenAt: nowIso,
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        category: 'EDUCATION',
+        language: 'en',
+        contentHash: 'hash-news-seed-2',
+        status: 'active',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'news-seed-3',
+        title: '₹4.8 Crore sanctioned for modernizing engineering and robotics labs in Ludhiana',
+        description: 'District development authority released modernization grants for government institutions to set up smart IoT and robotics manufacturing labs.',
+        sourceId: 'district-portal-ludhiana',
+        sourceUrl: 'https://ludhiana.nic.in',
+        articleUrl: 'https://ludhiana.nic.in/news/engineering-labs-grant-103',
+        publishedAt: yesterdayIso,
+        firstSeenAt: yesterdayIso,
+        lastSeenAt: nowIso,
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        category: 'GOVERNMENT',
+        language: 'en',
+        contentHash: 'hash-news-seed-3',
+        status: 'active',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'news-seed-4',
+        title: 'Jalandhar smart city command center upgrades traffic AI sensors',
+        description: 'Municipal Corporation Jalandhar installed 42 new intelligent traffic cameras along BMC Chowk and Rama Mandi corridor to reduce peak-hour congestion.',
+        sourceId: 'tribune-punjab',
+        sourceUrl: 'https://www.tribuneindia.com',
+        articleUrl: 'https://www.tribuneindia.com/news/jalandhar/smart-city-traffic-ai-104',
+        publishedAt: nowIso,
+        firstSeenAt: nowIso,
+        lastSeenAt: nowIso,
+        locationName: 'Jalandhar',
+        latitude: 31.326,
+        longitude: 75.5762,
+        category: 'TRAFFIC',
+        language: 'en',
+        contentHash: 'hash-news-seed-4',
+        status: 'active',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'news-seed-5',
+        title: 'Punjab Agricultural University showcases high-yield climate-resilient crop varieties',
+        description: 'Agronomy researchers at PAU Ludhiana presented updated organic farming methodologies and heat-tolerant seeds for upcoming rabi planting.',
+        sourceId: 'punjab-govt-portal',
+        sourceUrl: 'https://punjab.gov.in',
+        articleUrl: 'https://punjab.gov.in/news/pau-rabi-seeds-105',
+        publishedAt: twoDaysAgoIso,
+        firstSeenAt: twoDaysAgoIso,
+        lastSeenAt: nowIso,
+        locationName: 'Ludhiana',
+        latitude: 30.901,
+        longitude: 75.8573,
+        category: 'NEWS',
+        language: 'en',
+        contentHash: 'hash-news-seed-5',
+        status: 'active',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+    ];
+
+    for (const art of sampleArticles) {
+      articleRepository.insertArticle(art);
     }
   }
 }

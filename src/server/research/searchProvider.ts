@@ -140,13 +140,13 @@ class GoogleNewsRSSProvider implements SearchProvider {
 
   private cleanText(text: string): string {
     return text
-      .replace(/<[^>]+>/g, '') // strip HTML tags
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
       .replace(/&nbsp;/g, ' ')
+      .replace(/<[^>]+>/g, '') // strip HTML tags after unescaping
       .replace(/\s+/g, ' ')
       .trim();
   }

@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Copy,
   Ellipsis,
+  ExternalLink,
   FileText,
   Image,
   IndianRupee,
@@ -51,6 +52,12 @@ interface Attachment {
   type: 'image' | 'file' | 'location'
 }
 
+export interface SourceItem {
+  id?: string
+  name: string
+  url?: string
+}
+
 interface Message {
   id: string
   role: MessageRole
@@ -63,7 +70,8 @@ interface Message {
   }
   toolsInfo?: string
   cards?: Card[]
-  sources?: string[]
+  sources?: (string | SourceItem)[]
+  priceData?: any
   updatedAt?: string
 }
 
@@ -71,6 +79,7 @@ interface Card {
   type: 'pg' | 'news' | 'price' | 'event' | 'alert' | 'job'
   title: string
   detail: string
+  url?: string
   price?: string
   priceUnit?: string
   trend?: string
@@ -424,16 +433,17 @@ function FormattedMessageText({ text }: { text?: string }) {
   return (
     <div className="space-y-3 text-[15px] sm:text-[15.5px] text-slate-800 leading-[1.75]">
       {lines.map((line, idx) => {
-        const trimmed = line.trim()
-        if (!trimmed) {
+        // Strip raw html tags like <a href="..."> if present in string
+        const cleanLine = line.replace(/<[^>]+>/g, '').trim()
+        if (!cleanLine) {
           return <div key={idx} className="h-1.5" />
         }
 
-        const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ') || trimmed.startsWith('* ')
-        const bulletContent = isBullet ? trimmed.replace(/^[•\-*]\s*/, '') : trimmed
+        const isBullet = cleanLine.startsWith('•') || cleanLine.startsWith('- ') || cleanLine.startsWith('* ')
+        const bulletContent = isBullet ? cleanLine.replace(/^[•\-*]\s*/, '') : cleanLine
 
         // Parse bold markers: **text**
-        const parts = bulletContent.split(/(\*\*[^*]+\*\*)/g)
+        const parts = bulletContent.split(/(\*\*[^*]+\*\*|\[\d+\]|\[[a-zA-Z\s]+,\s*\d+[^\]]*\])/g)
         const parsedContent = parts.map((part, pIdx) => {
           if (part.startsWith('**') && part.endsWith('**')) {
             return (
@@ -442,13 +452,24 @@ function FormattedMessageText({ text }: { text?: string }) {
               </strong>
             )
           }
+          if (part.startsWith('[') && part.endsWith(']')) {
+            return (
+              <span
+                key={pIdx}
+                className="inline-block text-[11px] font-semibold text-[#1E2BB8] bg-indigo-50 border border-indigo-200/70 rounded px-1.5 py-0.5 mx-0.5 align-baseline tracking-tight"
+                title={`Citation: ${part.slice(1, -1)}`}
+              >
+                {part}
+              </span>
+            )
+          }
           return part
         })
 
         if (isBullet) {
           return (
             <div key={idx} className="flex items-start gap-2.5 pl-1 my-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2.5 shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#1E2BB8] mt-2.5 shrink-0" />
               <div className="flex-1 min-w-0 text-slate-800">
                 {parsedContent}
               </div>
@@ -468,6 +489,14 @@ function FormattedMessageText({ text }: { text?: string }) {
 
 function AICard({ card, onClick }: { card: Card; onClick?: () => void }) {
   const [imgError, setImgError] = useState(false)
+
+  const handleCardClick = () => {
+    if (card.url && typeof window !== 'undefined') {
+      window.open(card.url, '_blank', 'noopener,noreferrer')
+      return
+    }
+    if (onClick) onClick()
+  }
 
   // Default topic-matching thumbnail images matching the visual style
   const defaultImage =
@@ -529,7 +558,7 @@ function AICard({ card, onClick }: { card: Card; onClick?: () => void }) {
 
   return (
     <div
-      onClick={onClick}
+      onClick={handleCardClick}
       role="button"
       tabIndex={0}
       className="group relative bg-white rounded-[20px] overflow-hidden border border-slate-200/90 hover:border-[#1E2BB8]/40 shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06),0_1px_3px_rgba(15,23,42,0.03)] hover:shadow-[0_8px_24px_-4px_rgba(30,43,184,0.12),0_2px_6px_rgba(15,23,42,0.04)] transition-all duration-200 cursor-pointer flex flex-row items-stretch w-full h-[122px] sm:h-[126px] shrink-0 active:scale-[0.99]"
@@ -563,7 +592,7 @@ function AICard({ card, onClick }: { card: Card; onClick?: () => void }) {
 
       {/* Right Details Container */}
       <div className="flex-1 p-3 sm:p-3.5 flex flex-col justify-between min-w-0 bg-white">
-        {/* Top Entity & Badge Header: Avatar + Brand Name + Pill Badge + Three Dots */}
+        {/* Top Entity & Badge Header: Avatar + Brand Name + Pill Badge + External Link */}
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#1E2BB8] to-[#4F46E5] text-white flex items-center justify-center font-bold text-[9px] shrink-0 shadow-2xs">
@@ -578,14 +607,27 @@ function AICard({ card, onClick }: { card: Card; onClick?: () => void }) {
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getBadgeStyles(card.type)} tracking-tight`}>
               {badgeText}
             </span>
-            <button
-              type="button"
-              onClick={e => e.stopPropagation()}
-              className="text-slate-400 hover:text-slate-700 transition-colors p-0.5"
-              title="More options"
-            >
-              <Ellipsis size={15} />
-            </button>
+            {card.url ? (
+              <a
+                href={card.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                className="text-slate-400 hover:text-[#1E2BB8] transition-colors p-1 rounded-md hover:bg-indigo-50"
+                title="Open verified source article"
+              >
+                <ExternalLink size={13} />
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={e => e.stopPropagation()}
+                className="text-slate-400 hover:text-slate-700 transition-colors p-0.5"
+                title="More options"
+              >
+                <Ellipsis size={15} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -600,6 +642,14 @@ function AICard({ card, onClick }: { card: Card; onClick?: () => void }) {
             {card.detail}
           </p>
         </div>
+
+        {/* Card action label if present */}
+        {card.actionLabel && (
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-[#1E2BB8] pt-0.5">
+            <span>{card.actionLabel}</span>
+            <ExternalLink size={10} />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -720,7 +770,7 @@ function ChatHistoryRow({
 }
 
 export default function AIScreen({ navigate }: Props) {
-  const [messages, setMessages] = useState<Message[]>(INITIAL_HISTORY[0].messages)
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isThinking, setIsThinking] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -730,8 +780,8 @@ export default function AIScreen({ navigate }: Props) {
 
   // Chat History Sidebar states
   const [showSidebar, setShowSidebar] = useState(false)
-  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>(INITIAL_HISTORY)
-  const [activeChatId, setActiveChatId] = useState<string | null>(INITIAL_HISTORY[0].id)
+  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([])
+  const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null)
   const [renameText, setRenameText] = useState('')
@@ -1127,12 +1177,22 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
       .then(res => res.json())
       .then(data => {
         if (data.success && data.answer?.text) {
-          const sourcesList = (data.answer.sources || []).map((s: any) => s.name || s.url)
+          const rawSources = data.sources || data.answer.sources || []
+          const sourcesList: SourceItem[] = rawSources.map((s: any) => {
+            if (typeof s === 'string') return { name: s }
+            return {
+              id: s.id || s.name,
+              name: s.name || s.publisher || 'Verified Source',
+              url: s.url || '',
+            }
+          })
 
-          // Map interactive cards from retrieved results (events, alerts, news)
+          // Map interactive cards from retrieved results (events, alerts, news, prices)
           let cardsList: Card[] = []
           if (Array.isArray(data.results) && data.results.length > 0) {
-            cardsList = data.results.slice(0, 6).map((item: any) => {
+            cardsList = data.results.slice(0, 8).map((item: any) => {
+              const itemUrl = item.source?.url || item.metadata?.url || (item as any).url || ''
+
               if (item.type === 'EVENT') {
                 const dateBadge = item.metadata?.startAt
                   ? new Date(item.metadata.startAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -1141,13 +1201,14 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
                   type: 'event' as const,
                   title: item.title,
                   detail: item.summary || item.title,
+                  url: itemUrl,
                   badge: dateBadge,
                   icon: '📅',
                   color: '#8B5CF6',
                   source: item.metadata?.venue || item.source?.name || 'Local Event',
                   location: item.location?.name,
                   distance: item.location?.distanceKm != null ? `${item.location.distanceKm} km` : undefined,
-                  actionLabel: 'View Event',
+                  actionLabel: itemUrl ? 'Event Info ↗' : 'View Event',
                 }
               }
               if (item.type === 'ALERT' || item.type === 'GOVERNMENT_ALERT') {
@@ -1155,21 +1216,23 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
                   type: 'alert' as const,
                   title: item.title,
                   detail: item.summary || item.title,
+                  url: itemUrl,
                   badge: item.metadata?.severity || 'Official Notice',
                   icon: '⚠️',
                   color: item.metadata?.severity === 'URGENT' ? '#DC2626' : '#D97706',
                   source: item.metadata?.department || item.metadata?.issuedBy || item.source?.name || 'Government Notice',
                   location: item.location?.name,
-                  actionLabel: 'View Notice',
+                  actionLabel: itemUrl ? 'Read Advisory ↗' : 'View Notice',
                 }
               }
               if (item.type === 'PRICE') {
-                const comp = item.metadata?.comparison;
-                const sign = comp?.direction === 'INCREASED' ? '+' : comp?.direction === 'DECREASED' ? '-' : '';
+                const comp = item.metadata?.comparison
+                const sign = comp?.direction === 'INCREASED' ? '+' : comp?.direction === 'DECREASED' ? '-' : ''
                 return {
                   type: 'price' as const,
                   title: item.title,
                   detail: item.summary || item.title,
+                  url: itemUrl,
                   price: item.metadata?.price != null ? `₹${item.metadata.price}` : undefined,
                   priceUnit: item.metadata?.unit ? `per ${item.metadata.unit}` : undefined,
                   trend: comp?.percentage != null ? `${sign}${comp.percentage}%` : undefined,
@@ -1179,20 +1242,21 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
                   color: '#059669',
                   source: item.source?.name || 'Mandi Board',
                   location: item.location?.name,
-                  actionLabel: 'View Market',
+                  actionLabel: itemUrl ? 'Mandi Rates ↗' : 'View Market',
                 }
               }
               return {
                 type: 'news' as const,
                 title: item.title,
                 detail: item.summary || item.title,
-                badge: item.metadata?.category || item.location?.name || 'News',
+                url: itemUrl,
+                badge: item.metadata?.category || item.location?.name || 'Live News',
                 icon: '📰',
                 color: '#1E2BB8',
                 source: item.source?.name || 'Verified Feed',
                 location: item.location?.name,
                 distance: item.location?.distanceKm != null ? `${item.location.distanceKm} km` : undefined,
-                actionLabel: 'Read Article',
+                actionLabel: itemUrl ? 'Read Article ↗' : 'Read Article',
               }
             })
           } else if (Array.isArray(data.answer?.highlights) && data.answer.highlights.length > 0) {
@@ -1200,10 +1264,12 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
               type: 'news' as const,
               title: h.title,
               detail: h.summary,
+              url: h.url || '',
               badge: h.location || 'Local',
               icon: '📰',
               color: '#1E2BB8',
               source: h.sourceId || 'Verified Feed',
+              actionLabel: h.url ? 'Read Article ↗' : undefined,
             }))
           }
 
@@ -1213,8 +1279,8 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
           let toolsInfo: string | undefined
           if (data.research) {
             const searches = data.research.searchesPerformed || 1
-            const pages = data.research.sourcesRead || count
-            toolsInfo = `🔍 Researched ${searches} live query${searches > 1 ? 'ies' : ''} & read ${pages} source${pages > 1 ? 's' : ''} in ${data.research.durationMs || latency}ms · Confidence: ${confidence}`
+            const pages = data.research.evidenceItems || count
+            toolsInfo = `🔍 Researched ${searches} live query${searches > 1 ? 'ies' : ''} & verified ${pages} source${pages > 1 ? 's' : ''} in ${data.research.durationMs || latency}ms · Confidence: ${confidence}`
           } else if (count > 0) {
             toolsInfo = `Retrieved ${count} verified source${count > 1 ? 's' : ''} in ${latency}ms · Confidence: ${confidence}`
           }
@@ -1225,6 +1291,7 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
             text: data.answer.text,
             sources: sourcesList.length > 0 ? sourcesList : undefined,
             toolsInfo,
+            priceData: data.priceData,
             updatedAt: 'Just now',
             cards: cardsList.length > 0 ? cardsList : undefined,
           }
@@ -1241,9 +1308,10 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
           setIsThinking(false)
           return
         }
-        throw new Error('Fallback to local generator')
+        throw new Error('No structured answer returned from server')
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn('[AIScreen API Warning]', err?.message)
         const aiResponse = generateResponse(userQuery, currentAttach || undefined)
         setMessages(prev => {
           const next = [...prev, aiResponse]
@@ -1732,13 +1800,80 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
                         </span>
                       )}
 
-                      {msg.sources && msg.sources.length > 0 && (
-                        <div className="inline-flex items-center gap-1 text-slate-400 text-[11px] ml-auto">
-                          <ShieldCheck size={12} className="text-emerald-600 shrink-0" />
-                          <span className="truncate max-w-[200px]">Source: {msg.sources.join(' · ')}</span>
-                        </div>
-                      )}
+                      {/* Read aloud / Copy / Thumbs row end */}
                     </div>
+
+                    {/* Rich Price Intelligence Banner if price data present */}
+                    {msg.priceData && (
+                      <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs mt-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-white text-emerald-700 shadow-2xs border border-emerald-100 flex items-center justify-center text-lg font-bold shrink-0">
+                            🏷️
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-[14px] text-slate-900 capitalize truncate">
+                                {msg.priceData.product || 'Mandi Price'}
+                              </span>
+                              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wider shrink-0">
+                                {msg.priceData.current?.freshness || 'Verified'}
+                              </span>
+                            </div>
+                            <p className="text-[12px] text-slate-600 truncate mt-0.5">
+                              {msg.priceData.current?.market || 'Wholesale Mandi'} {msg.priceData.current?.location ? `· ${msg.priceData.current.location}` : ''}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <div className="font-extrabold text-[16px] sm:text-[17px] text-emerald-700 leading-tight">
+                            ₹{msg.priceData.current?.price ?? '—'} <span className="text-[11px] font-medium text-slate-500">/ {msg.priceData.current?.unit || 'kg'}</span>
+                          </div>
+                          {msg.priceData.comparison?.percentage != null && (
+                            <span className={`text-[11px] font-bold block mt-0.5 ${msg.priceData.comparison.direction === 'INCREASED' ? 'text-red-600' : msg.priceData.comparison.direction === 'DECREASED' ? 'text-emerald-700' : 'text-slate-600'}`}>
+                              {msg.priceData.comparison.direction === 'INCREASED' ? '↑ +' : msg.priceData.comparison.direction === 'DECREASED' ? '↓ -' : '• '}{Math.abs(msg.priceData.comparison.percentage)}% vs last week
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interactive Verified Sources Row */}
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100 mt-2">
+                        <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 mr-1 shrink-0">
+                          <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
+                          <span>Sources:</span>
+                        </div>
+                        {msg.sources.map((s, sIdx) => {
+                          const name = typeof s === 'string' ? s : s.name
+                          const url = typeof s === 'string' ? undefined : s.url
+                          if (url) {
+                            return (
+                              <a
+                                key={sIdx}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-[#1E2BB8] bg-indigo-50/90 hover:bg-indigo-100 border border-indigo-200/80 rounded-lg px-2 py-0.5 transition-colors cursor-pointer max-w-[200px]"
+                                title={`Open original report from ${name}`}
+                              >
+                                <span className="truncate">{name}</span>
+                                <ExternalLink size={10} className="shrink-0 text-[#1E2BB8]" />
+                              </a>
+                            )
+                          }
+                          return (
+                            <span
+                              key={sIdx}
+                              className="inline-flex items-center text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200/80 rounded-lg px-2 py-0.5"
+                            >
+                              {name}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -15,40 +15,41 @@ function aiQueryApiPlugin() {
           });
           req.on('end', async () => {
             try {
-              const body = JSON.parse(bodyStr || '{}');
-              const { defaultQueryRouter } = await server.ssrLoadModule('./src/server/ai/queryRouter.ts');
-              const { defaultRetrievalService } = await server.ssrLoadModule('./src/server/retrieval/retrievalService.ts');
-              const { aiAnswerService } = await server.ssrLoadModule('./src/server/answer/answerService.ts');
-              const structuredQuery = await defaultQueryRouter.routeQuery({
-                query: body.query,
-                location: body.location,
-                userLocation: body.userLocation,
-              });
-              const retrieval = await defaultRetrievalService.retrieve(structuredQuery);
-              const answerOutput = await aiAnswerService.generateAnswer({
-                originalQuery: body.query,
-                structuredQuery,
-                results: retrieval.items,
-              });
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({
-                success: true,
-                answer: {
-                  text: answerOutput.answer,
-                  highlights: answerOutput.highlights,
-                  sources: answerOutput.sources,
-                  confidence: answerOutput.confidence,
-                },
-                query: structuredQuery,
-                results: retrieval.items,
-                metadata: {
-                  resultCount: retrieval.items.length,
-                  latencyMs: answerOutput.metadata.latencyMs,
-                  warnings: answerOutput.warnings,
+              const { ensureServerStarted } = await server.ssrLoadModule('./src/server/startup.ts');
+              ensureServerStarted();
+              const { handleQueryRequest } = await server.ssrLoadModule('./src/server/handlers/queryHandler.ts');
+
+              const protocol = req.headers['x-forwarded-proto'] || 'http';
+              const host = req.headers.host || 'localhost:5173';
+              const fullUrl = `${protocol}://${host}${req.url}`;
+
+              const headers = new Headers();
+              for (const [key, value] of Object.entries(req.headers)) {
+                if (value) {
+                  if (Array.isArray(value)) {
+                    value.forEach((v: string) => headers.append(key, v));
+                  } else {
+                    headers.set(key, String(value));
+                  }
                 }
-              }));
+              }
+
+              const webRequest = new Request(fullUrl, {
+                method: req.method,
+                headers,
+                body: bodyStr,
+              });
+
+              const webResponse = await handleQueryRequest(webRequest);
+              res.statusCode = webResponse.status;
+              webResponse.headers.forEach((val: string, key: string) => {
+                res.setHeader(key, val);
+              });
+              const resText = await webResponse.text();
+              res.end(resText);
             } catch (err: any) {
-              res.statusCode = 400;
+              console.error('[Vite API Error]', err);
+              res.statusCode = 500;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ success: false, error: err.message || 'Error processing query' }));
             }

@@ -47,7 +47,18 @@ export class DatabasePriceSource implements DataSource<RetrievalItem> {
       }
     }
 
-    // Search price observations from repository
+    // Handle broad category queries (e.g., "vegetable prices", "mandi prices")
+    let targetCategory = params.filters?.category;
+    if (targetProduct) {
+      const lowerProd = targetProduct.toLowerCase();
+      if (lowerProd === 'vegetable' || lowerProd === 'vegetables') {
+        targetProduct = undefined;
+        targetCategory = 'VEGETABLE';
+      } else if (lowerProd === 'fruit' || lowerProd === 'fruits') {
+        targetProduct = undefined;
+        targetCategory = 'FRUIT';
+      }
+    }
     const records = priceRepository.searchPrices({
       product: targetProduct,
       market: params.filters?.market,
@@ -56,8 +67,7 @@ export class DatabasePriceSource implements DataSource<RetrievalItem> {
       longitude: targetLon,
       radiusKm,
       startDate: params.dateRange?.startDate,
-      endDate: params.dateRange?.endDate,
-      category: params.filters?.category,
+      category: targetCategory,
       limit: params.limit || 20,
     });
 

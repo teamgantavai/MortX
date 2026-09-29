@@ -149,7 +149,11 @@ export async function handleQueryRequest(request: Request): Promise<Response> {
     // Phase 2: Retrieval Orchestrator + Research Engine (run in parallel)
     const tRetrievalStart = Date.now();
 
-    const shouldResearch = RESEARCH_INTENTS.has(structuredQuery.intent);
+    const shouldResearch =
+      RESEARCH_INTENTS.has(structuredQuery.intent) ||
+      (structuredQuery.retrievalPlan?.includes('LOCAL_NEWS') &&
+        /\b(?:today|breaking|latest|happening|news|update|now|live|current|what(?:'s|\s+is))\b/i.test(body.query) &&
+        !/\b(?:weekend|next week)\b/i.test(body.query));
 
     const [retrieval, researchSession] = await Promise.all([
       localIntelligenceRetrievalService.retrieve(structuredQuery),
