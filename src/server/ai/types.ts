@@ -1,4 +1,5 @@
 export type QueryIntent =
+  | 'LOCAL_OVERVIEW'    // unified local intelligence: news + events + alerts combined
   | 'LOCAL_NEWS'
   | 'LOCAL_EVENTS'
   | 'GOVERNMENT_ALERTS'
@@ -68,13 +69,21 @@ export interface QueryFilters {
 
 export interface StructuredQuery {
   intent: QueryIntent;
-  /** For MIXED_LOCAL, all targeted intents */
+  /** For MIXED_LOCAL or LOCAL_OVERVIEW, all targeted sub-intents */
   intents?: QueryIntent[];
+  /** Concrete execution plan: which local retrieval sources to query concurrently */
+  retrievalPlan?: QueryIntent[];
   location: StructuredLocation | null;
   timeRange: StructuredTimeRange | null;
   category: QueryCategory;
   keywords: string[];
   filters: QueryFilters;
+  /** For PRICE_SEARCH: extracted commodity/product name (e.g. 'tomato', 'onion', 'wheat') */
+  product?: string;
+  /** For PRICE_SEARCH: historical comparison request if asked */
+  comparison?: { type: 'HISTORICAL' | 'LAST_WEEK' | 'YESTERDAY' } | null;
+  /** For PRICE_SEARCH: unit if specified (e.g. 'kg', 'quintal') */
+  unit?: string;
 }
 
 export interface AIQueryInput {

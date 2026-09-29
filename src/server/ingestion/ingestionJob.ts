@@ -36,11 +36,13 @@ export class NewsIngestionService {
   public async ingestNews(options?: IngestionOptions): Promise<IngestionJobStats> {
     const startedAt = new Date().toISOString();
 
-    // 1. Load enabled sources
+    // 1. Load enabled sources — only NEWS trust-level sources for this job
     let sources = options?.sources;
     if (!sources || sources.length === 0) {
       this.initializeSources();
-      sources = sourceRepository.getEnabledSources();
+      // Filter to only news sources: exclude test/event/alert/price sources
+      const allEnabled = sourceRepository.getEnabledSources();
+      sources = allEnabled.filter((s) => s.trustLevel === 'NEWS');
     }
 
     const sourceResults: IngestionResult[] = [];
@@ -96,8 +98,9 @@ export class NewsIngestionService {
     }
 
     try {
-      // 2. Fetch feed
-      const rawItems = await feedFetcher.fetchSource(source, { timeoutMs });
+      // 2. Fetch feed — only pass timeoutMs if explicitly defined to preserve fetcher defaults
+      const fetchOpts = timeoutMs !== undefined ? { timeoutMs } : undefined;
+      const rawItems = await feedFetcher.fetchSource(source, fetchOpts);
       sourceCircuitBreaker.recordSuccess(source.id);
 
       let itemsInserted = 0;

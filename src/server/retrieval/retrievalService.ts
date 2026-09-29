@@ -5,6 +5,8 @@ import { validateCoordinates } from './geoUtils';
 import { DatabaseNewsSource } from './sources/databaseNewsSource';
 import { DatabaseEventSource } from './sources/databaseEventSource';
 import { DatabaseAlertSource } from './sources/databaseAlertSource';
+import { DatabasePriceSource } from './sources/databasePriceSource';
+import { localIntelligenceRetrievalService } from './localIntelligenceRetrievalService';
 
 /** Max items per intent when running multi-category MIXED_LOCAL retrieval */
 const MIXED_LIMIT_PER_INTENT = 8;
@@ -16,6 +18,7 @@ export class RetrievalService {
     this.registerSource('LOCAL_NEWS', new DatabaseNewsSource());
     this.registerSource('LOCAL_EVENTS', new DatabaseEventSource());
     this.registerSource('GOVERNMENT_ALERTS', new DatabaseAlertSource());
+    this.registerSource('PRICE_SEARCH', new DatabasePriceSource());
   }
 
   public registerSource(intent: QueryIntent, source: DataSource<RetrievalItem>): void {
@@ -38,16 +41,33 @@ export class RetrievalService {
       }
     }
 
-    // ── MIXED_LOCAL: run up to 3 intents in parallel ──────────────────────────
-    if (query.intent === 'MIXED_LOCAL') {
-      return this.retrieveMixed(query);
+    // ── LOCAL_OVERVIEW / MIXED_LOCAL: run parallel retrieval across plan ──────
+    if (query.intent === 'LOCAL_OVERVIEW' || query.intent === 'MIXED_LOCAL') {
+      const overview = await localIntelligenceRetrievalService.retrieve(query);
+      return {
+        intent: query.intent,
+        status: overview.status === 'EMPTY' ? 'EMPTY' : 'SUCCESS',
+        items: overview.evidence.map((e: any) => ({
+          id: e.id,
+          type: e.type,
+          title: e.title,
+          summary: e.summary,
+          location: e.location,
+          publishedAt: e.publishedAt,
+          source: e.source,
+          metadata: e.metadata,
+        })),
+        total: overview.evidence.length,
+        ...(overview.message ? { message: overview.message } : {}),
+      };
     }
 
     // ── Single-intent dispatch ────────────────────────────────────────────────
     switch (query.intent) {
       case 'LOCAL_NEWS':
       case 'LOCAL_EVENTS':
-      case 'GOVERNMENT_ALERTS': {
+      case 'GOVERNMENT_ALERTS':
+      case 'PRICE_SEARCH': {
         const source = this.sources.get(query.intent);
         if (!source) {
           throw new Error(`No data source registered for ${query.intent}`);
@@ -61,7 +81,12 @@ export class RetrievalService {
           location: query.location,
           timeRange: query.timeRange,
           dateRange,
-          filters: query.filters,
+          filters: {
+            ...query.filters,
+            product: query.product,
+            comparison: query.comparison,
+            unit: query.unit,
+          },
         };
 
         const items = await source.search(params);
@@ -77,7 +102,6 @@ export class RetrievalService {
         };
       }
 
-      case 'PRICE_SEARCH':
       case 'PG_SEARCH':
       case 'COLLEGE_SEARCH':
       case 'GENERAL_LOCAL_SEARCH': {

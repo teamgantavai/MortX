@@ -1163,6 +1163,25 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
                   actionLabel: 'View Notice',
                 }
               }
+              if (item.type === 'PRICE') {
+                const comp = item.metadata?.comparison;
+                const sign = comp?.direction === 'INCREASED' ? '+' : comp?.direction === 'DECREASED' ? '-' : '';
+                return {
+                  type: 'price' as const,
+                  title: item.title,
+                  detail: item.summary || item.title,
+                  price: item.metadata?.price != null ? `₹${item.metadata.price}` : undefined,
+                  priceUnit: item.metadata?.unit ? `per ${item.metadata.unit}` : undefined,
+                  trend: comp?.percentage != null ? `${sign}${comp.percentage}%` : undefined,
+                  trendType: comp?.direction === 'INCREASED' ? 'up' as const : comp?.direction === 'DECREASED' ? 'down' as const : 'neutral' as const,
+                  badge: item.metadata?.market || 'Mandi Price',
+                  icon: '🏷️',
+                  color: '#059669',
+                  source: item.source?.name || 'Mandi Board',
+                  location: item.location?.name,
+                  actionLabel: 'View Market',
+                }
+              }
               return {
                 type: 'news' as const,
                 title: item.title,
@@ -1191,9 +1210,14 @@ Two things to update before you send it out: **[Your Phone Number]** and **[Your
           const latency = data.metadata?.latencyMs ?? 0
           const count = data.metadata?.resultCount ?? cardsList.length
           const confidence = data.answer.confidence || 'HIGH'
-          const toolsInfo = count > 0
-            ? `Retrieved ${count} verified source${count > 1 ? 's' : ''} in ${latency}ms · Confidence: ${confidence}`
-            : undefined
+          let toolsInfo: string | undefined
+          if (data.research) {
+            const searches = data.research.searchesPerformed || 1
+            const pages = data.research.sourcesRead || count
+            toolsInfo = `🔍 Researched ${searches} live query${searches > 1 ? 'ies' : ''} & read ${pages} source${pages > 1 ? 's' : ''} in ${data.research.durationMs || latency}ms · Confidence: ${confidence}`
+          } else if (count > 0) {
+            toolsInfo = `Retrieved ${count} verified source${count > 1 ? 's' : ''} in ${latency}ms · Confidence: ${confidence}`
+          }
 
           const aiResponse: Message = {
             id: getNextMessageId(),

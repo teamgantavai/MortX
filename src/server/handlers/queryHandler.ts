@@ -1,13 +1,19 @@
 import { defaultQueryRouter } from '../ai/queryRouter';
 import { AIQueryInput } from '../ai/types';
-import { defaultRetrievalService } from '../retrieval/retrievalService';
+import { localIntelligenceRetrievalService } from '../retrieval/localIntelligenceRetrievalService';
 import { aiAnswerService } from '../answer/answerService';
+import { researchOrchestrator } from '../research/researchOrchestrator';
 import { generateRequestId, logger } from '../observability/logger';
 import { rateLimiter } from '../security/rateLimiter';
 import { inputValidator } from '../security/inputValidator';
 import { cacheService } from '../cache/cacheService';
 import { articleRepository } from '../db/articleRepository';
 import { config } from '../config';
+
+// Intents that benefit from real-time research
+const RESEARCH_INTENTS = new Set([
+  'LOCAL_NEWS', 'GENERAL_LOCAL_SEARCH'
+]);
 
 export async function handleQueryRequest(request: Request): Promise<Response> {
   const reqStart = Date.now();
@@ -82,8 +88,9 @@ export async function handleQueryRequest(request: Request): Promise<Response> {
     );
   }
 
-  // 5. Caching Check
-  const locationKey = body.location?.placeName || (body.location?.latitude ? `${body.location.latitude}_${body.location.longitude}` : undefined);
+  // 5. Caching Check (locality/area key based on 2 decimal places to avoid over-specific exact GPS caching)
+  const roundCoord = (n?: number | string) => (typeof n === 'number' ? n.toFixed(2) : typeof n === 'string' && !isNaN(Number(n)) ? Number(n).toFixed(2) : '');
+  const locationKey = body.location?.placeName || (body.location?.latitude ? `${roundCoord(body.location.latitude)}_${roundCoord(body.location.longitude)}` : undefined);
   const cacheKey = cacheService.generateQueryCacheKey(body.query, locationKey);
   const cachedResponse = cacheService.get<any>(cacheKey);
 
@@ -139,44 +146,109 @@ export async function handleQueryRequest(request: Request): Promise<Response> {
     });
     queryRouterMs = Date.now() - tRouterStart;
 
-    // Phase 2: Retrieval Layer
+    // Phase 2: Retrieval Orchestrator + Research Engine (run in parallel)
     const tRetrievalStart = Date.now();
-    const retrieval = await defaultRetrievalService.retrieve(structuredQuery);
-    retrievalMs = Date.now() - tRetrievalStart;
-    const databaseMs = articleRepository.lastQueryDurationMs || 0;
 
-    // Phase 3: AI Answer Engine (with partial results fallback defense)
+    const shouldResearch = RESEARCH_INTENTS.has(structuredQuery.intent);
+
+    const [retrieval, researchSession] = await Promise.all([
+      localIntelligenceRetrievalService.retrieve(structuredQuery),
+      shouldResearch
+        ? researchOrchestrator.research(requestId, body.query, structuredQuery).catch((err) => {
+            logger.warn(requestId, `Research engine failed (non-fatal): ${err?.message}`);
+            return null;
+          })
+        : Promise.resolve(null),
+    ]);
+    retrievalMs = Date.now() - tRetrievalStart;
+
+    // Merge local DB evidence + research evidence
+    let mergedEvidence = [...retrieval.evidence];
+    if (researchSession && researchSession.evidence.length > 0) {
+      // Convert research evidence items to the evidence format expected by answerService
+      const researchEvidence = researchSession.evidence.slice(0, 8).map((item) => ({
+        id: item.id,
+        title: item.title,
+        summary: item.evidenceText.slice(0, 400),
+        publishedAt: item.publishedAt || new Date().toISOString(),
+        type: 'NEWS' as const,
+        source: {
+          name: item.publisher,
+          url: item.url,
+          type: item.tier as any,
+        },
+        location: { name: researchSession.plan.locationContext, latitude: undefined, longitude: undefined },
+        relevanceScore: item.rankScore,
+        importance: 'NORMAL' as const,
+        metadata: { researchItemId: item.id, url: item.url },
+      }));
+
+      // Merge: local DB first, then research (dedup by title similarity)
+      const existingTitles = new Set(mergedEvidence.map((e) => e.title.toLowerCase().slice(0, 40)));
+      const newResearchItems = researchEvidence.filter(
+        (re) => !existingTitles.has(re.title.toLowerCase().slice(0, 40))
+      );
+      mergedEvidence = [...mergedEvidence, ...newResearchItems];
+    }
+
+    // Phase 3: AI Answer Engine
     const tAnswerStart = Date.now();
     let answerOutput: any;
-    try {
-      answerOutput = await aiAnswerService.generateAnswer({
-        originalQuery: body.query,
-        structuredQuery,
-        results: retrieval.items,
-      });
-    } catch (aiErr: any) {
-      logger.warn(requestId, `AI Answer Engine error, falling back to structured results`, aiErr);
-      // Graceful degradation: never lose the retrieved results
+
+    // If research engine found results, use research answer directly for single-category news
+    const isSingleCategoryNews = structuredQuery.intent === 'LOCAL_NEWS' || structuredQuery.intent === 'GENERAL_LOCAL_SEARCH';
+    if (isSingleCategoryNews && researchSession?.answer && researchSession.evidence.length > 0) {
+      const researchAns = researchSession.answer;
       answerOutput = {
-        answer: retrieval.items.length > 0
-          ? `We found ${retrieval.items.length} relevant updates, but the AI synthesis is temporarily degraded.`
-          : "I couldn't find reliable current information matching your request.",
-        highlights: retrieval.items.map((it) => ({
-          title: it.title,
-          summary: it.summary,
-          location: it.location.name,
-          publishedAt: it.publishedAt,
+        answer: researchAns.answer,
+        highlights: researchAns.claims.map((c) => ({
+          title: c.text.slice(0, 100),
+          summary: c.text,
+          location: researchSession.plan.locationContext,
+          publishedAt: new Date().toISOString(),
+          sourceId: c.sourceIds[0] || 'research',
         })),
-        sources: retrieval.items.map((it) => ({
-          id: it.source.name,
-          name: it.source.name,
-          url: it.source.url || '',
-          publishedAt: it.publishedAt,
+        sources: researchAns.sources.map((s) => ({
+          id: s.id,
+          name: s.publisher,
+          url: s.url,
+          publishedAt: s.publishedAt || new Date().toISOString(),
         })),
-        confidence: 'LOW',
+        confidence: researchSession.evidence.length >= 3 ? 'HIGH' : 'MEDIUM',
         metadata: { latencyMs: Date.now() - tAnswerStart },
-        warnings: ['AI Answer Engine encountered a temporary error; showing direct evidence.'],
+        warnings: [],
       };
+    } else {
+      // Fallback: use local DB evidence with existing answer engine
+      try {
+        answerOutput = await aiAnswerService.generateAnswer({
+          originalQuery: body.query,
+          structuredQuery,
+          results: mergedEvidence,
+        });
+      } catch (aiErr: any) {
+        logger.warn(requestId, `AI Answer Engine error, falling back to structured results`, aiErr);
+        answerOutput = {
+          answer: mergedEvidence.length > 0
+            ? `We found ${mergedEvidence.length} relevant updates, but the AI synthesis is temporarily degraded.`
+            : "I couldn't find reliable current information matching your request.",
+          highlights: mergedEvidence.map((it) => ({
+            title: it.title,
+            summary: it.summary,
+            location: it.location.name,
+            publishedAt: it.publishedAt,
+          })),
+          sources: mergedEvidence.map((it) => ({
+            id: it.source.name,
+            name: it.source.name,
+            url: it.source.url || '',
+            publishedAt: it.publishedAt,
+          })),
+          confidence: 'LOW',
+          metadata: { latencyMs: Date.now() - tAnswerStart },
+          warnings: ['AI Answer Engine encountered a temporary error; showing direct evidence.'],
+        };
+      }
     }
     answerEngineMs = Date.now() - tAnswerStart;
 
@@ -189,34 +261,58 @@ export async function handleQueryRequest(request: Request): Promise<Response> {
         highlights: answerOutput.highlights,
         sources: answerOutput.sources,
         confidence: answerOutput.confidence,
+        // Include research claims with citations if available
+        ...(researchSession?.answer?.claims ? { claims: researchSession.answer.claims } : {}),
+        ...(researchSession?.answer?.followUpQuestions ? { followUpQuestions: researchSession.answer.followUpQuestions } : {}),
       },
+      sources: answerOutput.sources,
+      ...(answerOutput.priceData ? { priceData: answerOutput.priceData } : {}),
+      // Research metadata block
+      ...(researchSession ? {
+        research: {
+          searchesPerformed: researchSession.meta.searchesPerformed,
+          sourcesRead: researchSession.meta.sourcesRead,
+          evidenceItems: researchSession.meta.evidenceItems,
+          retrievedAt: researchSession.meta.retrievedAt,
+          durationMs: researchSession.meta.durationMs,
+          searchQueries: researchSession.plan.searchQueries,
+          provider: 'google-news-rss',
+        },
+      } : {}),
       query: structuredQuery,
-      results: retrieval.items,
+      retrievalPlan: retrieval.retrievalPlan,
+      results: mergedEvidence,
       ...(retrieval.message ? { message: retrieval.message } : {}),
       requestId,
       metadata: {
-        resultCount: retrieval.items.length,
+        resultCount: mergedEvidence.length,
         latencyMs: totalMs,
         timings: {
           queryRouterMs,
           retrievalMs,
-          databaseMs,
+          databaseMs: retrieval.timings.parallelFetchMs,
+          parallelFetchMs: retrieval.timings.parallelFetchMs,
+          rankAndFilterMs: retrieval.timings.rankAndFilterMs,
           answerEngineMs,
           totalMs,
         },
+        sourcesUsed: retrieval.sourcesUsed,
+        sourcesFailed: retrieval.sourcesFailed,
         warnings: answerOutput.warnings || [],
       },
     };
 
     // Store in cache with intent-appropriate TTL
-    let ttlSeconds = config.cacheTtlNewsSeconds;
+    // Research results get a shorter TTL since they change rapidly
+    let ttlSeconds = researchSession?.evidence.length
+      ? config.cacheTtlResearchSeconds  // 2 min for real-time research
+      : config.cacheTtlNewsSeconds;     // 10 min for DB-only
     if (structuredQuery.intent === 'LOCAL_EVENTS') {
       ttlSeconds = config.cacheTtlEventsSeconds;
+    } else if (structuredQuery.intent === 'PRICE_SEARCH') {
+      ttlSeconds = config.cacheTtlPricesSeconds;
     } else if (structuredQuery.intent === 'GOVERNMENT_ALERTS') {
-      ttlSeconds = config.cacheTtlAlertsSeconds;
-    } else if (structuredQuery.intent === 'MIXED_LOCAL') {
-      // Mixed: use shortest TTL among included types (alerts: 5 min)
-      ttlSeconds = config.cacheTtlAlertsSeconds;
+      ttlSeconds = Math.min(config.cacheTtlAlertsSeconds, config.cacheTtlResearchSeconds);
     }
     cacheService.set(cacheKey, responsePayload, ttlSeconds);
 
@@ -226,11 +322,11 @@ export async function handleQueryRequest(request: Request): Promise<Response> {
       intent: structuredQuery.intent,
       status: 'SUCCESS',
       cacheHit: false,
-      retrievalCount: retrieval.items.length,
+      retrievalCount: retrieval.evidence.length,
       timings: {
         queryRouterMs,
         retrievalMs,
-        databaseMs,
+        databaseMs: articleRepository.lastQueryDurationMs || 0,
         answerEngineMs,
         totalMs,
       },

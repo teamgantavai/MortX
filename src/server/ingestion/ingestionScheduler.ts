@@ -13,7 +13,7 @@ import { eventIngestionService } from './eventIngestionJob';
 import { alertIngestionService } from './alertIngestionJob';
 import { config } from '../config';
 
-type JobName = 'NEWS' | 'EVENTS' | 'ALERTS';
+type JobName = 'NEWS' | 'EVENTS' | 'ALERTS' | 'PRICES';
 
 interface JobStatus {
   name: JobName;
@@ -28,6 +28,7 @@ export class IngestionScheduler {
     ['NEWS',   { name: 'NEWS',   lastRunAt: null, lastResult: null, lastInserted: 0, timerId: null }],
     ['EVENTS', { name: 'EVENTS', lastRunAt: null, lastResult: null, lastInserted: 0, timerId: null }],
     ['ALERTS', { name: 'ALERTS', lastRunAt: null, lastResult: null, lastInserted: 0, timerId: null }],
+    ['PRICES', { name: 'PRICES', lastRunAt: null, lastResult: null, lastInserted: 0, timerId: null }],
   ]);
 
   private log(msg: string): void {
@@ -38,6 +39,7 @@ export class IngestionScheduler {
     this.scheduleJob('NEWS', config.ingestionIntervalNewsMs, () => this.runNews());
     this.scheduleJob('EVENTS', config.ingestionIntervalEventsMs, () => this.runEvents());
     this.scheduleJob('ALERTS', config.ingestionIntervalAlertsMs, () => this.runAlerts());
+    this.scheduleJob('PRICES', config.ingestionIntervalPricesMs, () => this.runPrices());
     this.log('All ingestion jobs scheduled.');
   }
 
@@ -116,6 +118,22 @@ export class IngestionScheduler {
     } catch (err: any) {
       status.lastResult = 'FAILED';
       this.log(`ALERTS ingestion error: ${err?.message}`);
+    }
+  }
+
+  private async runPrices(): Promise<void> {
+    const status = this.jobs.get('PRICES')!;
+    this.log('Running PRICES ingestion...');
+    try {
+      const { priceRepository } = await import('../db/priceRepository');
+      const count = priceRepository.countPrices();
+      status.lastRunAt = new Date().toISOString();
+      status.lastResult = 'SUCCESS';
+      status.lastInserted = 0;
+      this.log(`PRICES active check done — current observations in DB: ${count}`);
+    } catch (err: any) {
+      status.lastResult = 'FAILED';
+      this.log(`PRICES ingestion error: ${err?.message}`);
     }
   }
 }

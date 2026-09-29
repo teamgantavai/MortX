@@ -4,7 +4,8 @@ import { AIQueryInput, StructuredQuery, QueryIntent } from './types';
 
 const QUERY_SCHEMA_SPECIFICATION = `
 {
-  "intent": "LOCAL_NEWS" | "LOCAL_EVENTS" | "GOVERNMENT_ALERTS" | "MIXED_LOCAL" | "PRICE_SEARCH" | "PG_SEARCH" | "COLLEGE_SEARCH" | "GENERAL_LOCAL_SEARCH" | "GENERAL_AI_QUERY",
+  "intent": "LOCAL_OVERVIEW" | "LOCAL_NEWS" | "LOCAL_EVENTS" | "GOVERNMENT_ALERTS" | "MIXED_LOCAL" | "PRICE_SEARCH" | "PG_SEARCH" | "COLLEGE_SEARCH" | "GENERAL_LOCAL_SEARCH" | "GENERAL_AI_QUERY",
+  "retrievalPlan": string[],
   "intents": string[],
   "location": {
     "type": "USER_LOCATION" | "NEAR_USER" | "NAMED_LOCATION" | "NEAR_COLLEGE" | "GLOBAL",
@@ -46,13 +47,15 @@ Query: "${trimmedQuery}"
 
 Instructions:
 1. Intent: Choose exactly one of:
-   - LOCAL_NEWS: for news, incidents, happenings, updates in an area
-   - LOCAL_EVENTS: for events, festivals, programs, gatherings, concerts, sports
-   - GOVERNMENT_ALERTS: for government notices, public alerts, warnings, official announcements, weather warnings
-   - MIXED_LOCAL: if the query spans multiple categories (e.g. "what's happening near me this weekend" = events + news + alerts)
+   - LOCAL_OVERVIEW: for general questions about what is happening in an area, weekend roundups, or broad updates (combines news, events, and alerts)
+   - LOCAL_NEWS: specifically for local news, crime, infrastructure, civic incidents, happenings
+   - LOCAL_EVENTS: specifically for upcoming events, festivals, concerts, sports, workshops
+   - GOVERNMENT_ALERTS: specifically for official notices, public alerts, warnings, weather warnings
    - PRICE_SEARCH, PG_SEARCH, COLLEGE_SEARCH, GENERAL_LOCAL_SEARCH, GENERAL_AI_QUERY for other cases.
 
-2. intents: If intent is MIXED_LOCAL, list the specific sub-intents from ["LOCAL_NEWS","LOCAL_EVENTS","GOVERNMENT_ALERTS"]. Otherwise empty array [].
+2. retrievalPlan: Array of data sources needed:
+   - For broad/overview queries ("what's happening near me?", "any updates this weekend?"): ["LOCAL_NEWS", "LOCAL_EVENTS", "GOVERNMENT_ALERTS"]
+   - For specific queries: only the required source (e.g. ["LOCAL_NEWS"] or ["LOCAL_EVENTS"] or ["GOVERNMENT_ALERTS"])
 
 3. Location:
    - "near me", "around me", "nearby" -> {"type": "USER_LOCATION"}
@@ -106,9 +109,26 @@ Instructions:
       structured.intents = [];
     }
 
-    // Auto-populate intents for MIXED_LOCAL if the LLM didn't provide it
-    if (structured.intent === 'MIXED_LOCAL' && structured.intents.length === 0) {
+    // Auto-populate intents for MIXED_LOCAL or LOCAL_OVERVIEW if the LLM didn't provide it
+    if ((structured.intent === 'MIXED_LOCAL' || structured.intent === 'LOCAL_OVERVIEW') && structured.intents.length === 0) {
       structured.intents = ['LOCAL_NEWS', 'LOCAL_EVENTS', 'GOVERNMENT_ALERTS'] as QueryIntent[];
+    }
+
+    // Ensure retrievalPlan is always present and aligned with intent
+    if (!structured.retrievalPlan || structured.retrievalPlan.length === 0) {
+      if (structured.intent === 'LOCAL_OVERVIEW' || structured.intent === 'MIXED_LOCAL') {
+        structured.retrievalPlan = structured.intents.length > 0
+          ? structured.intents
+          : (['LOCAL_NEWS', 'LOCAL_EVENTS', 'GOVERNMENT_ALERTS'] as QueryIntent[]);
+      } else if (structured.intent === 'LOCAL_NEWS') {
+        structured.retrievalPlan = ['LOCAL_NEWS' as QueryIntent];
+      } else if (structured.intent === 'LOCAL_EVENTS') {
+        structured.retrievalPlan = ['LOCAL_EVENTS' as QueryIntent];
+      } else if (structured.intent === 'GOVERNMENT_ALERTS') {
+        structured.retrievalPlan = ['GOVERNMENT_ALERTS' as QueryIntent];
+      } else {
+        structured.retrievalPlan = [structured.intent];
+      }
     }
 
     return structured;

@@ -2,7 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { ALL_DEFAULT_SOURCES } from '../ingestion/sourcesConfig';
 import { eventRepository } from './eventRepository';
 import { alertRepository } from './alertRepository';
-import { GovernmentAlertRecord, EventRecord } from '../ingestion/types';
+import { priceRepository } from './priceRepository';
+import { GovernmentAlertRecord } from '../ingestion/types';
 
 export function seedInitialDataIfNeeded(db: DatabaseSync): void {
   // 1. Seed default sources if missing
@@ -218,4 +219,219 @@ export function seedInitialDataIfNeeded(db: DatabaseSync): void {
       alertRepository.insertAlert(alt);
     }
   }
+
+  // 4. Seed price observations if table is empty
+  const countPricesStmt = db.prepare('SELECT count(*) as count FROM price_observations');
+  const priceCount = (countPricesStmt.get() as any)?.count || 0;
+
+  if (priceCount === 0) {
+    const todayIso = nowIso;
+    const sevenDaysAgoIso = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    const tenDaysAgoIso = new Date(Date.now() - 10 * 86_400_000).toISOString();
+
+    const samplePrices = [
+      // 1. Tomato at Maqsudan Mandi (current + 1 week ago -> +20% INCREASED)
+      {
+        id: 'price-seed-tomato-today',
+        productName: 'Tomato',
+        category: 'VEGETABLE' as const,
+        price: 42,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Maqsudan APMC Wholesale Market',
+        locationName: 'Jalandhar',
+        latitude: 31.341,
+        longitude: 75.568,
+        observedAt: todayIso,
+        sourceId: 'maqsudan-apmc-jalandhar',
+        sourceUrl: 'https://agmarknet.gov.in/api/jalandhar/prices',
+        contentHash: 'hash-seed-price-tomato-today',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'price-seed-tomato-last-week',
+        productName: 'Tomato',
+        category: 'VEGETABLE' as const,
+        price: 35,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Maqsudan APMC Wholesale Market',
+        locationName: 'Jalandhar',
+        latitude: 31.341,
+        longitude: 75.568,
+        observedAt: sevenDaysAgoIso,
+        sourceId: 'maqsudan-apmc-jalandhar',
+        sourceUrl: 'https://agmarknet.gov.in/api/jalandhar/prices',
+        contentHash: 'hash-seed-price-tomato-lastweek',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      // 2. Tomato at Model Town Market (different market on same day -> tests multiple markets)
+      {
+        id: 'price-seed-tomato-model-town',
+        productName: 'Tomato',
+        category: 'VEGETABLE' as const,
+        price: 48,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Model Town Retail Market',
+        locationName: 'Model Town, Jalandhar',
+        latitude: 31.312,
+        longitude: 75.584,
+        observedAt: todayIso,
+        sourceId: 'model-town-market-jalandhar',
+        sourceUrl: 'https://jalandharmarket.org/retail/daily-rates',
+        contentHash: 'hash-seed-price-tomato-modeltown',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      // 3. Onion at Maqsudan Mandi (current 28 vs 32 last week -> DECREASED)
+      {
+        id: 'price-seed-onion-today',
+        productName: 'Onion',
+        category: 'VEGETABLE' as const,
+        price: 28,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Maqsudan APMC Wholesale Market',
+        locationName: 'Jalandhar',
+        latitude: 31.341,
+        longitude: 75.568,
+        observedAt: todayIso,
+        sourceId: 'maqsudan-apmc-jalandhar',
+        sourceUrl: 'https://agmarknet.gov.in/api/jalandhar/prices',
+        contentHash: 'hash-seed-price-onion-today',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'price-seed-onion-last-week',
+        productName: 'Onion',
+        category: 'VEGETABLE' as const,
+        price: 32,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Maqsudan APMC Wholesale Market',
+        locationName: 'Jalandhar',
+        latitude: 31.341,
+        longitude: 75.568,
+        observedAt: sevenDaysAgoIso,
+        sourceId: 'maqsudan-apmc-jalandhar',
+        sourceUrl: 'https://agmarknet.gov.in/api/jalandhar/prices',
+        contentHash: 'hash-seed-price-onion-lastweek',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      // 4. Potato at Maqsudan Mandi (current 22 vs 22 last week -> STABLE)
+      {
+        id: 'price-seed-potato-today',
+        productName: 'Potato',
+        category: 'VEGETABLE' as const,
+        price: 22,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Maqsudan APMC Wholesale Market',
+        locationName: 'Jalandhar',
+        latitude: 31.341,
+        longitude: 75.568,
+        observedAt: todayIso,
+        sourceId: 'maqsudan-apmc-jalandhar',
+        sourceUrl: 'https://agmarknet.gov.in/api/jalandhar/prices',
+        contentHash: 'hash-seed-price-potato-today',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      {
+        id: 'price-seed-potato-last-week',
+        productName: 'Potato',
+        category: 'VEGETABLE' as const,
+        price: 22,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Maqsudan APMC Wholesale Market',
+        locationName: 'Jalandhar',
+        latitude: 31.341,
+        longitude: 75.568,
+        observedAt: sevenDaysAgoIso,
+        sourceId: 'maqsudan-apmc-jalandhar',
+        sourceUrl: 'https://agmarknet.gov.in/api/jalandhar/prices',
+        contentHash: 'hash-seed-price-potato-lastweek',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      // 5. Wheat at Grain Market (quintal unit -> tests non-kg unit)
+      {
+        id: 'price-seed-wheat-today',
+        productName: 'Wheat',
+        category: 'GRAIN' as const,
+        price: 2450,
+        unit: 'quintal',
+        currency: 'INR',
+        market: 'Grain Market Jalandhar',
+        locationName: 'Jalandhar',
+        latitude: 31.326,
+        longitude: 75.5762,
+        observedAt: todayIso,
+        sourceId: 'punjab-mandi-board',
+        sourceUrl: 'https://mandiboard.nic.in/api/daily-prices',
+        contentHash: 'hash-seed-price-wheat-today',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      // 6. Cauliflower (single observation -> tests missing historical data)
+      {
+        id: 'price-seed-cauliflower-today',
+        productName: 'Cauliflower',
+        category: 'VEGETABLE' as const,
+        price: 30,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Maqsudan APMC Wholesale Market',
+        locationName: 'Jalandhar',
+        latitude: 31.341,
+        longitude: 75.568,
+        observedAt: todayIso,
+        sourceId: 'maqsudan-apmc-jalandhar',
+        sourceUrl: 'https://agmarknet.gov.in/api/jalandhar/prices',
+        contentHash: 'hash-seed-price-cauliflower-today',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+      // 7. Ginger (observed 10 days ago -> tests stale price detection)
+      {
+        id: 'price-seed-ginger-stale',
+        productName: 'Ginger',
+        category: 'VEGETABLE' as const,
+        price: 120,
+        unit: 'kg',
+        currency: 'INR',
+        market: 'Maqsudan APMC Wholesale Market',
+        locationName: 'Jalandhar',
+        latitude: 31.341,
+        longitude: 75.568,
+        observedAt: tenDaysAgoIso,
+        sourceId: 'maqsudan-apmc-jalandhar',
+        sourceUrl: 'https://agmarknet.gov.in/api/jalandhar/prices',
+        contentHash: 'hash-seed-price-ginger-stale',
+        status: 'active' as const,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+    ];
+
+    for (const pr of samplePrices) {
+      priceRepository.insertPrice(pr);
+    }
+  }
 }
+

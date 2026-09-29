@@ -7,9 +7,7 @@ import {
   Map,
   MapPin,
   Newspaper,
-  Shield,
   Sparkles,
-  TrendingUp,
   User,
   MessageSquare
 } from 'lucide-react'
@@ -49,18 +47,7 @@ const BOTTOM_NAV = [
   { screen: 'profile' as Screen, label: 'Profile', icon: User },
 ]
 
-const RIGHT_PANEL_TRENDING = [
-  { emoji: '📚', text: 'PTU BTech seats increased for 2026-27', time: '1 hr ago', category: 'Education' },
-  { emoji: '🚧', text: 'Ferozepur Road diversion update', time: '2 hr ago', category: 'Traffic' },
-  { emoji: '💼', text: '850 Punjab Police vacancies open', time: '1 day ago', category: 'Jobs' },
-  { emoji: '🥬', text: 'Vegetable prices drop 8% today', time: 'Today', category: 'Prices' },
-]
 
-const RIGHT_PANEL_ALERTS = [
-  { priority: 'urgent', text: 'Yellow rain alert after 7 PM', color: '#D97706' },
-  { priority: 'urgent', text: 'Miller Ganj road closure', color: '#DC2626' },
-  { priority: 'info', text: 'PTU deadline extended to Nov 15', color: '#2563EB' },
-]
 
 // Logo component
 function AaspaasLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
@@ -221,112 +208,7 @@ function BottomNav({ activeTab, navigate }: { activeTab: Screen; navigate: (s: S
   )
 }
 
-// Right panel (desktop XL)
-function RightPanel({ navigate }: { navigate: (s: Screen) => void }) {
-  return (
-    <div className="py-5 px-4 space-y-5">
-      {/* AI Brief */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#1E2BB8] to-[#4357E6] flex items-center justify-center">
-            <Sparkles size={11} className="text-white" />
-          </div>
-          <span className="font-display font-700 text-[14px] text-[#0D1117]">AI Brief</span>
-          <div className="ml-auto flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
-            <span className="text-[10px] text-[#9CA3AF]">Live</span>
-          </div>
-        </div>
 
-        <div className="bg-white rounded-xl border border-[#E8E6E1] p-3 space-y-2">
-          {['Ferozepur Road: 20 min delay, use Pakhowal Rd', 'Rain alert 7 PM — carry umbrella', 'Tomato ↓8% at Ludhiana mandi'].map((point, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <div className="w-1 h-1 rounded-full bg-[#9CA3AF] mt-2 shrink-0" />
-              <p className="text-xs text-[#374151] leading-snug">{point}</p>
-            </div>
-          ))}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#F4F2ED]">
-            <div className="flex items-center gap-1">
-              <Shield size={10} className="text-[#9CA3AF]" />
-              <span className="text-[10px] text-[#9CA3AF]">3 sources</span>
-            </div>
-            <button
-              onClick={() => navigate('ai')}
-              className="text-[10px] font-600 text-[#1E2BB8]"
-            >
-              Ask AI →
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Active alerts */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <span className="font-display font-700 text-[14px] text-[#0D1117]">Active Alerts</span>
-          <button
-            onClick={() => navigate('alerts')}
-            className="text-[11px] font-500 text-[#1E2BB8]"
-          >
-            All alerts →
-          </button>
-        </div>
-        <div className="space-y-2">
-          {RIGHT_PANEL_ALERTS.map((alert, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-2 p-2.5 bg-white rounded-xl border border-[#E8E6E1]"
-            >
-              <div
-                className="w-1 h-full rounded-full shrink-0 mt-1 self-stretch"
-                style={{ backgroundColor: alert.color, minHeight: 32 }}
-              />
-              <p className="text-xs text-[#374151] leading-snug">{alert.text}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Trending nearby */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={14} className="text-[#DC2626]" />
-          <span className="font-display font-700 text-[14px] text-[#0D1117]">Trending nearby</span>
-        </div>
-        <div className="space-y-2">
-          {RIGHT_PANEL_TRENDING.map((item, i) => (
-            <button
-              key={i}
-              onClick={() => navigate('news')}
-              className="w-full flex items-start gap-2.5 p-2.5 bg-white rounded-xl border border-[#E8E6E1] hover:border-[#C4CEFF] hover:bg-[#EEF1FF] transition-colors text-left"
-            >
-              <span className="text-lg shrink-0">{item.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-500 text-[#0D1117] leading-snug line-clamp-2">{item.text}</p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-[10px] text-[#9CA3AF]">{item.time}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-[#F4F2ED] text-[#6B7280] rounded-full">{item.category}</span>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Source note */}
-      <div className="p-3 bg-[#F4F2ED] rounded-xl">
-        <div className="flex items-center gap-1.5 mb-1">
-          <Shield size={12} className="text-[#6B7280]" />
-          <span className="text-xs font-600 text-[#6B7280]">Source transparency</span>
-        </div>
-        <p className="text-[10px] text-[#9CA3AF] leading-relaxed">
-          All information is sourced from government portals, verified news publishers, and AGMARKNET.
-          AI summaries are clearly labelled.
-        </p>
-      </div>
-    </div>
-  )
-}
 
 // Screen renderer
 function renderScreen(screen: Screen, navigate: (s: Screen) => void, goBack: () => void) {
@@ -456,10 +338,7 @@ export default function App() {
         )}
       </div>
 
-      {/* Desktop right panel */}
-      <aside className="hidden xl:flex flex-col w-72 shrink-0 border-l border-[#E8E6E1] bg-[#F9F8F5] overflow-y-auto no-scrollbar">
-        <RightPanel navigate={navigate} />
-      </aside>
+
     </div>
   )
 }

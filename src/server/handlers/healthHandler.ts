@@ -1,6 +1,7 @@
 import { articleRepository } from '../db/articleRepository';
 import { eventRepository } from '../db/eventRepository';
 import { alertRepository } from '../db/alertRepository';
+import { priceRepository } from '../db/priceRepository';
 import { cacheService } from '../cache/cacheService';
 import { AIService } from '../ai/aiService';
 
@@ -10,11 +11,13 @@ export async function handleHealthRequest(_request: Request): Promise<Response> 
   let articleCount = 0;
   let eventCount = 0;
   let alertCount = 0;
+  let priceCount = 0;
 
   try {
     articleCount = articleRepository.countArticles();
     eventCount = eventRepository.countEvents();
     alertCount = alertRepository.countAlerts();
+    priceCount = priceRepository.countPrices();
   } catch {
     dbStatus = 'DOWN';
   }
@@ -46,6 +49,7 @@ export async function handleHealthRequest(_request: Request): Promise<Response> 
           articleCount,
           eventCount,
           alertCount,
+          priceCount,
         },
         cache: {
           status: 'UP',

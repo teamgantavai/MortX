@@ -116,6 +116,7 @@ CREATE INDEX IF NOT EXISTS idx_news_articles_coords ON news_articles(latitude, l
 export const CREATE_EVENTS_INDEXES = `
 CREATE UNIQUE INDEX IF NOT EXISTS idx_events_hash ON events(contentHash);
 CREATE INDEX IF NOT EXISTS idx_events_start ON events(startAt);
+CREATE INDEX IF NOT EXISTS idx_events_end ON events(endAt);
 CREATE INDEX IF NOT EXISTS idx_events_location ON events(locationName);
 CREATE INDEX IF NOT EXISTS idx_events_coords ON events(latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
@@ -125,6 +126,45 @@ export const CREATE_ALERTS_INDEXES = `
 CREATE UNIQUE INDEX IF NOT EXISTS idx_alerts_hash ON government_alerts(contentHash);
 CREATE INDEX IF NOT EXISTS idx_alerts_published ON government_alerts(publishedAt DESC);
 CREATE INDEX IF NOT EXISTS idx_alerts_effective ON government_alerts(effectiveFrom, effectiveUntil);
+CREATE INDEX IF NOT EXISTS idx_alerts_until ON government_alerts(effectiveUntil);
 CREATE INDEX IF NOT EXISTS idx_alerts_location ON government_alerts(locationName);
 CREATE INDEX IF NOT EXISTS idx_alerts_status ON government_alerts(status);
 `;
+
+// ────────────────────────────────────────────────────────────────
+// PRICE OBSERVATIONS TABLE
+// ────────────────────────────────────────────────────────────────
+export const CREATE_PRICE_OBSERVATIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS price_observations (
+  id TEXT PRIMARY KEY,
+  productName TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'VEGETABLE',
+  price REAL NOT NULL,
+  unit TEXT NOT NULL DEFAULT 'kg',
+  currency TEXT NOT NULL DEFAULT 'INR',
+  market TEXT NOT NULL,
+  locationName TEXT NOT NULL,
+  latitude REAL,
+  longitude REAL,
+  observedAt TEXT NOT NULL,
+  sourceId TEXT NOT NULL,
+  sourceUrl TEXT,
+  contentHash TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL,
+  FOREIGN KEY (sourceId) REFERENCES sources(id)
+);
+`;
+
+export const CREATE_PRICE_INDEXES = `
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prices_hash ON price_observations(contentHash);
+CREATE INDEX IF NOT EXISTS idx_prices_product ON price_observations(productName);
+CREATE INDEX IF NOT EXISTS idx_prices_observed ON price_observations(observedAt DESC);
+CREATE INDEX IF NOT EXISTS idx_prices_product_observed ON price_observations(productName, observedAt DESC);
+CREATE INDEX IF NOT EXISTS idx_prices_market ON price_observations(market);
+CREATE INDEX IF NOT EXISTS idx_prices_location ON price_observations(locationName);
+CREATE INDEX IF NOT EXISTS idx_prices_source ON price_observations(sourceId);
+CREATE INDEX IF NOT EXISTS idx_prices_status ON price_observations(status);
+`;
+

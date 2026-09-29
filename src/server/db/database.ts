@@ -7,10 +7,13 @@ import {
   CREATE_NEWS_ARTICLES_TABLE,
   CREATE_EVENTS_TABLE,
   CREATE_GOVERNMENT_ALERTS_TABLE,
+  CREATE_PRICE_OBSERVATIONS_TABLE,
   CREATE_INDEXES,
   CREATE_EVENTS_INDEXES,
   CREATE_ALERTS_INDEXES,
+  CREATE_PRICE_INDEXES,
 } from './schema';
+import { seedInitialDataIfNeeded } from './seed';
 
 class DatabaseManager {
   private db: DatabaseSync | null = null;
@@ -53,11 +56,13 @@ class DatabaseManager {
     this.db.exec(CREATE_NEWS_ARTICLES_TABLE);
     this.db.exec(CREATE_EVENTS_TABLE);
     this.db.exec(CREATE_GOVERNMENT_ALERTS_TABLE);
+    this.db.exec(CREATE_PRICE_OBSERVATIONS_TABLE);
 
     // Idempotent indexes
     this.db.exec(CREATE_INDEXES);
     this.db.exec(CREATE_EVENTS_INDEXES);
     this.db.exec(CREATE_ALERTS_INDEXES);
+    this.db.exec(CREATE_PRICE_INDEXES);
 
     // Safe migration: add trustLevel column to existing databases
     try {
@@ -66,11 +71,10 @@ class DatabaseManager {
       // Column already exists – this is expected on fresh databases; ignore
     }
 
-    // Seed initial sources, events, and alerts if needed
+    // Seed initial sources, events, alerts, and prices if needed
     try {
-      const { seedInitialDataIfNeeded } = require('./seed');
       seedInitialDataIfNeeded(this.db);
-    } catch (seedErr) {
+    } catch {
       // Non-fatal if seeding is already handled or in test mock
     }
   }
@@ -84,6 +88,7 @@ class DatabaseManager {
 
   public reset(): void {
     if (this.db) {
+      this.db.exec('DROP TABLE IF EXISTS price_observations;');
       this.db.exec('DROP TABLE IF EXISTS government_alerts;');
       this.db.exec('DROP TABLE IF EXISTS events;');
       this.db.exec('DROP TABLE IF EXISTS news_articles;');

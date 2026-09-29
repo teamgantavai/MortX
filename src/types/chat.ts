@@ -5,6 +5,14 @@ export interface CodeBlockData {
   code: string;
 }
 
+export interface ResearchSource {
+  id: string;
+  title: string;
+  url: string;
+  publisher: string;
+  publishedAt: string | null;
+}
+
 export interface ChatMessage {
   id: string;
   role: MessageRole;
@@ -20,6 +28,16 @@ export interface ChatMessage {
     type: string;
     url?: string;
   }[];
+  /** Research metadata — present when the AI Research Engine was used */
+  researchMeta?: {
+    searchesPerformed: number;
+    sourcesRead: number;
+    evidenceItems: number;
+    retrievedAt: string;
+    durationMs: number;
+    searchQueries?: string[];
+    sources?: ResearchSource[];
+  };
 }
 
 export interface Conversation {

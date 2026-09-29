@@ -117,12 +117,12 @@ test('3. Retrieval - "Find PG under 8000" -> PG_SEARCH controlled response', asy
   assert.ok(data.message.includes('not implemented yet'));
 });
 
-test('4. Retrieval - "Tomato price today" -> PRICE_SEARCH controlled response', async () => {
+test('4. Retrieval - "PTU admissions cutoff" -> COLLEGE_SEARCH controlled response', async () => {
   const req = new Request('http://localhost:5173/api/ai/query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      query: 'Tomato price today',
+      query: 'PTU admissions cutoff',
     }),
   });
 
@@ -131,7 +131,7 @@ test('4. Retrieval - "Tomato price today" -> PRICE_SEARCH controlled response', 
 
   const data = await res.json();
   assert.equal(data.success, true);
-  assert.equal(data.query.intent, 'PRICE_SEARCH');
+  assert.equal(data.query.intent, 'COLLEGE_SEARCH');
   assert.deepEqual(data.results, []);
   assert.ok(data.message.includes('not implemented yet'));
 });

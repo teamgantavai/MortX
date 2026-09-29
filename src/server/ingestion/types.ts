@@ -158,6 +158,58 @@ export interface GovernmentAlertRecord {
   updatedAt: string;
 }
 
+export type PriceCategory =
+  | 'VEGETABLE'
+  | 'FRUIT'
+  | 'GRAIN'
+  | 'COMMODITY'
+  | 'FUEL'
+  | 'GROCERY'
+  | 'OTHER';
+
+export type PriceUnit =
+  | 'kg'
+  | 'gram'
+  | 'litre'
+  | 'dozen'
+  | 'piece'
+  | 'quintal';
+
+export interface PriceObservationRecord {
+  id: string;
+  productName: string;
+  category: PriceCategory;
+  price: number;
+  unit: PriceUnit | string;
+  currency: string;
+  market: string;
+  locationName: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  observedAt: string; // ISO 8601
+  sourceId: string;
+  sourceUrl?: string | null;
+  contentHash: string;
+  status: 'active' | 'archived' | 'flagged';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NormalizedPrice {
+  productName: string;
+  category: PriceCategory;
+  price: number;
+  unit: PriceUnit | string;
+  currency: string;
+  market: string;
+  locationName: string;
+  latitude?: number;
+  longitude?: number;
+  observedAt: string;
+  sourceId: string;
+  sourceUrl?: string;
+}
+
 // ─────────────────────────────────────────────────────────
 // INGESTION JOB STATS
 // ─────────────────────────────────────────────────────────
